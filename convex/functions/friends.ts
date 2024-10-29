@@ -45,7 +45,7 @@ const mapWithUsers = async <
       if (!user) {
         throw new Error("User not found");
       }
-      return [...item, user];
+      return { ...item, user };
     })
   );
   return result.filter((r) => r.status === "fulfilled").map((r) => r.value);
