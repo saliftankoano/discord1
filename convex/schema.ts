@@ -5,7 +5,9 @@ export default defineSchema({
     username: v.string(),
     image: v.string(),
     clerkId: v.string(),
-  }).index("by_clerkId", ["clerkId"]),
+  })
+    .index("by_clerkId", ["clerkId"])
+    .index("by_username", ["username"]),
   friends: defineTable({
     user1: v.id("users"),
     user2: v.id("users"),

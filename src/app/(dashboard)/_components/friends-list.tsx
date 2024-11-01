@@ -1,4 +1,5 @@
-import { useQuery } from "convex/react";
+"use client";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,36 +11,35 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-const useTestUsers = () => {
-  const user = useQuery(api.functions.user.get);
-  if (!user) {
-    return [];
-  } else {
-    return [user, user, user];
-  }
-};
-
 export function PendingFriendsList() {
-  const users = useTestUsers();
+  const friends = useQuery(api.functions.friends.listPending);
+  const updateStatus = useMutation(api.functions.friends.updateStatus);
+
   return (
     <div className="flex flex-col divide-y">
       <h2 className="text-xs font-medium text-muted-foreground p-2.5">
         Pending friends
       </h2>
-      {users.length == 0 && (
+      {friends?.length == 0 && (
         <FriendListEmpty>No Pending friends requests </FriendListEmpty>
       )}
-      {users.map((user, index) => (
-        <FriendItem key={index} username={user.username} image={user.image}>
+      {friends?.map((friend, index) => (
+        <FriendItem
+          key={index}
+          username={friend.user.username}
+          image={friend.user.image}
+        >
           <IconButton
             title="Accept"
             icon={<CheckIcon />}
             className="bg-green-500"
+            onClick={() => updateStatus({ id: friend._id, status: "accepted" })}
           />
           <IconButton
             title="Reject"
             icon={<CheckIcon />}
             className="bg-red-500"
+            onClick={() => updateStatus({ id: friend._id, status: "rejected" })}
           />
         </FriendItem>
       ))}
@@ -48,19 +48,36 @@ export function PendingFriendsList() {
 }
 
 export function AcceptedFriendsList() {
-  const users = useTestUsers();
+  const friends = useQuery(api.functions.friends.listAccepted);
+  const updateStatus = useMutation(api.functions.friends.updateStatus);
   return (
     <div className="flex flex-col divide-y">
       <h2 className="text-xs font-medium text-muted-foreground p-2.5">
         Accepted friends
       </h2>
-      {users.length == 0 && (
+      {friends?.length == 0 && (
         <FriendListEmpty>No friends yet 😔</FriendListEmpty>
       )}
-      {users.map((user, index) => (
-        <FriendItem key={index} username={user.username} image={user.image}>
-          <IconButton title="Start DM" icon={<MessageCircle />} className="" />
-          <IconButton title="Remove" icon={<XIcon />} className="bg-red-500" />
+      {friends?.map((friend, index) => (
+        <FriendItem
+          key={index}
+          username={friend.user.username}
+          image={friend.user.image}
+        >
+          <IconButton
+            title="Start DM"
+            icon={<MessageCircle />}
+            className=""
+            onClick={() => {}}
+          />
+          <IconButton
+            title="Remove"
+            icon={<XIcon />}
+            className="bg-red-500"
+            onClick={() => {
+              updateStatus({ id: friend._id, status: "rejected" });
+            }}
+          />
         </FriendItem>
       ))}
     </div>
@@ -77,10 +94,12 @@ function IconButton({
   title,
   className,
   icon,
+  onClick,
 }: {
   title: string;
   className?: string;
   icon: React.ReactNode;
+  onClick: () => void;
 }) {
   return (
     <Tooltip>
@@ -89,6 +108,7 @@ function IconButton({
           className={cn("rounded-full", className)}
           size="icon"
           variant="outline"
+          onClick={onClick}
         >
           {icon}
           <span className="sr-only">{title}</span>

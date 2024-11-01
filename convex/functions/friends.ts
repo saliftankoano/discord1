@@ -1,6 +1,7 @@
-import { authenticatedQuery } from "./helpers";
+import { authenticatedMutation, authenticatedQuery } from "./helpers";
 import { QueryCtx } from "../_generated/server";
 import { Id } from "../_generated/dataModel";
+import { v } from "convex/values";
 
 export const listPending = authenticatedQuery({
   handler: async (ctx) => {
@@ -28,6 +29,48 @@ export const listAccepted = authenticatedQuery({
         q.eq("user2", ctx.user._id).eq("status", "accepted")
       )
       .collect();
+
+    const friendWithUser1 = await mapWithUsers(ctx, friend1, "user2");
+    const friendWithUser2 = await mapWithUsers(ctx, friend2, "user1");
+    return [...friendWithUser1, ...friendWithUser2];
+  },
+});
+
+export const createFriendRequest = authenticatedMutation({
+  args: { username: v.string() },
+  handler: async (ctx, { username }) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", username))
+      .unique();
+    if (!user) {
+      throw new Error("User not found");
+    } else if (user._id == ctx.user._id) {
+      throw new Error("You cannot add yourself as a friend.");
+    }
+
+    await ctx.db.insert("friends", {
+      user1: ctx.user._id,
+      user2: user._id,
+      status: "pending",
+    });
+  },
+});
+
+export const updateStatus = authenticatedMutation({
+  args: {
+    id: v.id("friends"),
+    status: v.union(v.literal("accepted"), v.literal("rejected")),
+  },
+  handler: async (ctx, { id, status }) => {
+    const friend = await ctx.db.get(id);
+    if (!friend) {
+      throw new Error("Friend not found");
+    }
+    if (friend.user1 !== ctx.user._id && friend.user2 !== ctx.user._id) {
+      throw new Error("Unauthorized");
+    }
+    await ctx.db.patch(id, { status });
   },
 });
 
