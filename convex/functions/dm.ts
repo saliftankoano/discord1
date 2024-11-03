@@ -76,7 +76,7 @@ const getDirectMessage = async (
   ctx: QueryCtx & { user: Doc<"users"> },
   id: Id<"directMessages">
 ) => {
-  const dm = ctx.db.get(id);
+  const dm = await ctx.db.get(id);
   if (!dm) {
     throw new Error("Direct message does not exit.");
   }

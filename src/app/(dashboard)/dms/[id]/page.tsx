@@ -53,7 +53,7 @@ type Message = FunctionReturnType<typeof api.functions.message.list>[number];
 
 function MessageItem({ message }: { message: Message }) {
   return (
-    <div className="flex items-center px-4 gap-2">
+    <div className="flex items-center px-4 gap-2 py-2">
       <Avatar className="size-8 border">
         {message.sender && <AvatarImage src={message.sender?.image} />}
         <AvatarFallback />
@@ -71,6 +71,7 @@ function MessageItem({ message }: { message: Message }) {
 
 function MessageActions({ message }: { message: Message }) {
   const user = useQuery(api.functions.user.get);
+  const removeMutation = useMutation(api.functions.message.remove);
   if (!user || message.sender?._id !== user?._id) {
     return null;
   }
@@ -81,7 +82,10 @@ function MessageActions({ message }: { message: Message }) {
         <span className="sr-only"> Messsage Actions</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuItem className="text-destructive">
+        <DropdownMenuItem
+          className="text-destructive"
+          onClick={() => removeMutation({ id: message._id })}
+        >
           <TrashIcon />
           Delete
         </DropdownMenuItem>

@@ -62,7 +62,7 @@ export function DashboardSidebar() {
                   >
                     <Link href={`/dms/${directMessage._id}`}>
                       <Avatar className="size-6">
-                        <AvatarImage src={directMessage} />
+                        <AvatarImage src={directMessage.user.image} />
                         <AvatarFallback>
                           {directMessage?.user.username[0]}
                         </AvatarFallback>
