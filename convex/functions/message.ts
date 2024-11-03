@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { authenticatedMutation, authenticatedQuery } from "./helpers";
 import { internal } from "../_generated/api";
+
 export const list = authenticatedQuery({
   args: {
     directMessage: v.id("directMessages"),
@@ -24,8 +25,12 @@ export const list = authenticatedQuery({
     return await Promise.all(
       messages.map(async (message) => {
         const sender = await ctx.db.get(message.sender);
+        const attachment = message.attachment
+          ? await ctx.storage.getUrl(message.attachment)
+          : undefined;
         return {
           ...message,
+          attachment,
           sender,
         };
       })
@@ -37,8 +42,9 @@ export const create = authenticatedMutation({
   args: {
     content: v.string(),
     directMessage: v.id("directMessages"),
+    attachment: v.optional(v.id("_storage")),
   },
-  handler: async (ctx, { directMessage, content }) => {
+  handler: async (ctx, { directMessage, attachment, content }) => {
     const member = await ctx.db
       .query("directMessageMembers")
       .withIndex("by_direct_message_user", (q) =>
@@ -49,6 +55,7 @@ export const create = authenticatedMutation({
       throw new Error("You are not a member of this message thread.");
     }
     await ctx.db.insert("messages", {
+      attachment,
       content,
       directMessage,
       sender: ctx.user._id,
@@ -72,5 +79,14 @@ export const remove = authenticatedMutation({
       throw new Error("You are not the author of this message");
     }
     await ctx.db.delete(id);
+    if (message.attachment) {
+      await ctx.storage.delete(message.attachment);
+    }
+  },
+});
+
+export const generateUploadUrl = authenticatedMutation({
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
   },
 });
