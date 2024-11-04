@@ -85,15 +85,26 @@ function MessageItem({ message }: { message: Message }) {
         <p className="text-xs text-muted-foreground">
           {message.sender?.username ?? "Deleted user"}
         </p>
-        <p className="text-sm text-muted-foreground">{message.content}</p>
-        {message.attachment && (
-          <Image
-            className="rounded border overflow-hidden"
-            src={message.attachment}
-            width={300}
-            height={300}
-            alt="image attachment"
-          />
+        {message.deleted ? (
+          <>
+            <p className="text-sm text-destructive">
+              Message was deleted!{" "}
+              <span>It contains: {message.deletedReason} </span>
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">{message.content}</p>
+            {message.attachment && (
+              <Image
+                className="rounded border overflow-hidden"
+                src={message.attachment}
+                width={300}
+                height={300}
+                alt="image attachment"
+              />
+            )}
+          </>
         )}
       </div>
       <MessageActions message={message} />
@@ -138,6 +149,7 @@ function MessageInput({
   const generateUploadUrl = useMutation(
     api.functions.message.generateUploadUrl
   );
+  const removeAttachment = useMutation(api.functions.storage.remove);
   const [attachment, setAttachment] = useState<Id<"_storage">>();
   const [file, setFile] = useState<File>();
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -167,6 +179,9 @@ function MessageInput({
       setContent("");
       setAttachment(undefined);
       setFile(undefined);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     } catch (error) {
       toast.error("Failed to send message.", {
         description:
@@ -188,7 +203,19 @@ function MessageInput({
           <span className="sr-only">Attach</span>
         </Button>
         <div className="flex flex-col flex-1 gap-2">
-          {file && <ImagePreview file={file} isUploading={isUploading} />}
+          {file && (
+            <ImagePreview
+              file={file}
+              isUploading={isUploading}
+              onDelete={() => {
+                if (attachment) {
+                  removeAttachment({ storageId: attachment });
+                }
+                setAttachment(undefined);
+                setFile(undefined);
+              }}
+            />
+          )}
           <Input
             placeholder="Message"
             value={content}
@@ -219,9 +246,11 @@ function MessageInput({
 function ImagePreview({
   file,
   isUploading,
+  onDelete,
 }: {
   file: File;
   isUploading: boolean;
+  onDelete: () => void;
 }) {
   return (
     <div className="relative size-40 overflow-hidden rounded border">
@@ -236,6 +265,16 @@ function ImagePreview({
           <LoaderIcon className="animate-spin size-8" />
         </div>
       )}
+      <Button
+        type="button"
+        className="absolute top-2 right-2"
+        variant="destructive"
+        size="icon"
+        onClick={onDelete}
+      >
+        <TrashIcon />
+        <span className="sr-only">Delete</span>
+      </Button>
     </div>
   );
 }
