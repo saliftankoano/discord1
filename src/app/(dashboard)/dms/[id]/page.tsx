@@ -1,6 +1,6 @@
 "use client";
 import { useMutation, useQuery } from "convex/react";
-import { use, useRef, useState } from "react";
+import { use, useRef, useState, useEffect } from "react";
 import { api } from "../../../../../convex/_generated/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,11 +23,13 @@ import { Id } from "../../../../../convex/_generated/dataModel";
 import { FunctionReturnType } from "convex/server";
 import { toast } from "sonner";
 import Image from "next/image";
+
 export default function MessagePage({
   params,
 }: {
   params: Promise<{ id: Id<"directMessages"> }>;
 }) {
+  const lastMessageRef = useRef<HTMLDivElement | null>(null);
   const { id } = use(params);
   const directMessage = useQuery(api.functions.dm.get, {
     id,
@@ -35,9 +37,22 @@ export default function MessagePage({
   const messages = useQuery(api.functions.message.list, {
     directMessage: id,
   });
+  function scrollToLastMessage() {
+    if (lastMessageRef.current) {
+      lastMessageRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  }
+  // Auto-scroll to the last message when `messages` updates
+  useEffect(() => {
+    scrollToLastMessage();
+  }, [messages]);
   if (!directMessage) {
     return null;
   }
+
   return (
     <div className="flex flex-1 flex-col divide-y max-h-screen">
       <header className="flex items-center gap-2 p-4">
@@ -51,12 +66,14 @@ export default function MessagePage({
         {messages?.map((message) => (
           <MessageItem key={message._id} message={message} />
         ))}
+        <div className="scroller" ref={lastMessageRef}></div>
       </ScrollArea>
       <TypingIndicators directMessage={id} />
       <MessageInput directMessage={id} />
     </div>
   );
 }
+
 function TypingIndicators({
   directMessage,
 }: {
